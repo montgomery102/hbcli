@@ -1,0 +1,81 @@
+use std::fs;
+use std::path::Path;
+use std::process::Command;
+use regex::Regex;
+use inflector::Inflector;
+
+fn main() {
+    let input_dir = Path::new("Z:\\Downloaded");
+    let output_dir = Path::new("Z:\\Handbraked");
+    let preset_file = "Z:\\HandbrakeHardware.json";
+
+    // Scan the input directory and process files larger than 400MB
+    if let Err(err) = process_directory(input_dir, output_dir, preset_file) {
+        eprintln!("Error processing directory: {}", err);
+    }
+}
+
+fn process_directory(input_dir: &Path, output_dir: &Path, preset_file: &str) -> std::io::Result<()> {
+    for entry in fs::read_dir(input_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            println!("Entering directory: {:?}", path);
+            process_directory(&path, output_dir, preset_file)?;
+        } else if path.is_file() && path.extension().map_or(false, |ext| ext == "mkv") {
+            println!("Checking file: {:?}", path);
+
+            if let Ok(metadata) = fs::metadata(&path) {
+                let file_size = metadata.len();
+                println!("File size: {} bytes", file_size);
+
+                if file_size > 400 * 1024 * 1024 {
+                    let file_name = path.file_name().unwrap().to_str().unwrap();
+
+                    if is_valid_file(file_name) {
+                        println!("File matches criteria: {:?}", path);
+                        convert_with_handbrake(&path, output_dir, preset_file);
+                    } else {
+                        println!("File does not match regex: {:?}", path);
+                    }
+                } else {
+                    println!("File is smaller than 400MB: {:?}", path);
+                }
+            } else {
+                println!("Failed to get metadata for file: {:?}", path);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn is_valid_file(file_name: &str) -> bool {
+    let re = Regex::new(r"(?i)S\d{2}E\d{2}|\(\d{4}\)|\d{4}").unwrap();
+    re.is_match(file_name)
+}
+
+fn convert_with_handbrake(input_path: &Path, output_dir: &Path, preset_file: &str) {
+    let file_name = input_path.file_stem().unwrap().to_str().unwrap();
+    let title_case_file_name = file_name.to_title_case();
+    let output_file = output_dir.join(format!("{}.m4v", title_case_file_name));
+
+    println!("Converting file: {:?} to {:?}", input_path, output_file);
+
+    let status = Command::new("C:\\Users\\ianmo\\Downloads\\HandBrakeCLI-1.8.1-win-x86_64\\HandBrakeCLI.exe")
+        .arg("--preset-import-gui")
+        .arg(preset_file)
+        .arg("-i")
+        .arg(input_path)
+        .arg("-o")
+        .arg(output_file)
+        .status()
+        .expect("Failed to execute HandBrakeCLI");
+
+    if !status.success() {
+        eprintln!("HandBrakeCLI failed to convert {:?}", input_path);
+    } else {
+        println!("Successfully converted {:?}", input_path);
+    }
+}
