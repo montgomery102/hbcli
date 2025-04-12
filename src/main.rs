@@ -44,7 +44,7 @@ fn main() -> io::Result<()> {
             let output_file_name = format!("{}.mp4", input_file_name.to_string().replace(".mkv", ""));
             let output_file_path = output_path.join(&output_file_name);
 
-            println!("Processing file: {:?}", input_file);
+            //println!("Processing file: {:?}", input_file);
 
             let status = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe")
                 .arg("-i").arg(&input_file)
