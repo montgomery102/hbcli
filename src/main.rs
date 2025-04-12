@@ -7,17 +7,23 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
         println!("Usage: {} <input_path> <output_path> [preset_path]", args[0]);
-        println!("Note: preset_path is optional. If left off Handbrake will encode with default “Normal” Preset.")
+        println!("Note: preset_path is optional. If left off Handbrake will encode with default “Normal” Preset.");
         return Ok(());
     }
 
-    let input_path = Path::new(&args[1]);
-    let output_path = Path::new(&args[2]);
-    let preset_path = if args.len() >= 4 {
-        Some(Path::new(&args[3]))
-    } else {
-        None
-    };
+    let input_path_cleaned = clean_path(&args[1]);
+    let input_path = Path::new(&input_path_cleaned);
+
+    let output_path_cleaned = clean_path(&args[2]);
+    let output_path = Path::new(&output_path_cleaned);
+
+let preset_path_cleaned = if args.len() >= 4 {
+    Some(clean_path(&args[3]))
+} else {
+    None
+};
+
+let preset_path = preset_path_cleaned.as_ref().map(|s| Path::new(s));
 
     if !input_path.exists() || !input_path.is_dir() {
         eprintln!("Error: Input path '{}' does not exist or is not a directory.", input_path.display());
@@ -29,10 +35,10 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    if !preset_path.exists() || !preset_path.is_file() {
-        eprintln!("Error: Preset file '{}' does not exist or is not a file.", preset_path.display());
-        return Ok(());
-    }
+//    if !preset_path.exists() || !preset_path.is_file() {
+//        eprintln!("Error: Preset file '{}' does not exist or is not a file.", preset_path.display());
+//        return Ok(());
+//    }
 
     //println!("Input Directory: {:?}", input_path);
     //println!("Output Directory: {:?}", output_path);
@@ -51,10 +57,14 @@ fn main() -> io::Result<()> {
 
             //println!("Processing file: {:?}", input_file);
 
-            let output = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe")
+            let mut command = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe");
+            command
                 .arg("-i").arg(&input_file)
-                .arg("-o").arg(&output_file_path)
-                .arg("--preset-import-gui").arg(&preset_path)
+                .arg("-o").arg(&output_file_path);
+            if let Some(preset) = preset_path {
+                command.arg("--preset-import-gui").arg(preset);
+            }
+            let output = command
                 .output()
                 .expect("Failed to start HandBrakeCLI");
 
@@ -93,3 +103,11 @@ fn find_files(dir: &Path, files: &mut Vec<PathBuf>) {
         }
     }
 }
+fn clean_path(arg: &str) -> String {
+    let stripped = arg
+        .strip_prefix('\'')
+        .and_then(|s| s.strip_suffix('\''))
+        .unwrap_or(arg);
+    stripped.trim_end_matches('\\').to_string()
+}
+
