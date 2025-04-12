@@ -5,14 +5,19 @@ use std::io;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() < 4 {
-        println!("Usage: {} <input_path> <output_path> <preset_path>", args[0]);
+    if args.len() < 3 {
+        println!("Usage: {} <input_path> <output_path> [preset_path]", args[0]);
+        println!("Note: preset_path is optional. If left off Handbrake will encode with default “Normal” Preset.")
         return Ok(());
     }
 
     let input_path = Path::new(&args[1]);
     let output_path = Path::new(&args[2]);
-    let preset_path = Path::new(&args[3]);
+    let preset_path = if args.len() >= 4 {
+        Some(Path::new(&args[3]))
+    } else {
+        None
+    };
 
     if !input_path.exists() || !input_path.is_dir() {
         eprintln!("Error: Input path '{}' does not exist or is not a directory.", input_path.display());
