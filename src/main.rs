@@ -46,26 +46,28 @@ fn main() -> io::Result<()> {
 
             //println!("Processing file: {:?}", input_file);
 
-            let status = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe")
+            let output = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe")
                 .arg("-i").arg(&input_file)
                 .arg("-o").arg(&output_file_path)
                 .arg("--preset-import-gui").arg(&preset_path)
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
                 .output()
                 .expect("Failed to start HandBrakeCLI");
 
-            if !status.status.success() {
-                println!("HandBrakeCLI failed with: {:?}", status);
+            if !output.status.success() {
+                eprintln!("HandBrakeCLI failed with: {:?}. Error output:", output.status.code());
+                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
             } else {
                 println!("Successfully converted {:?} to {:?}", input_file, output_file_path);
+                files_processed += 1;
             }
-
-            files_processed += 1;
         } else {
             //println!("Skipping file {:?} because it is smaller than 400MB.", input_file);
         }
     }
+if files_processed == 0 {
+    eprintln!("No files were processed.");
+    std::process::exit(1);
+}
 
     println!("Processed {} files.", files_processed);
 
