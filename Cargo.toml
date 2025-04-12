@@ -1,0 +1,15 @@
+[package]
+name = "hbcli"
+version = "0.0.1"
+edition = "2021"
+
+# Optional: a short description
+description = "A Rust program that automates HandBrakeCLI for batch video processing."
+
+# Optional: authors field
+authors = ["Ian Montgomery"]
+
+# Optional: repository field (for linking GitHub)
+repository = "https://github.com/montgomery102/hbcli"
+
+[dependencies]

@@ -5,14 +5,25 @@ use std::io;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() < 4 {
-        println!("Usage: {} <input_path> <output_path> <preset_path>", args[0]);
+    if args.len() < 3 {
+        println!("Usage: {} <input_path> <output_path> [preset_path]", args[0]);
+        println!("Note: preset_path is optional. If left off Handbrake will encode with default “Normal” Preset.");
         return Ok(());
     }
 
-    let input_path = Path::new(&args[1]);
-    let output_path = Path::new(&args[2]);
-    let preset_path = Path::new(&args[3]);
+    let input_path_cleaned = clean_path(&args[1]);
+    let input_path = Path::new(&input_path_cleaned);
+
+    let output_path_cleaned = clean_path(&args[2]);
+    let output_path = Path::new(&output_path_cleaned);
+
+let preset_path_cleaned = if args.len() >= 4 {
+    Some(clean_path(&args[3]))
+} else {
+    None
+};
+
+let preset_path = preset_path_cleaned.as_ref().map(|s| Path::new(s));
 
     if !input_path.exists() || !input_path.is_dir() {
         eprintln!("Error: Input path '{}' does not exist or is not a directory.", input_path.display());
@@ -24,10 +35,10 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    if !preset_path.exists() || !preset_path.is_file() {
-        eprintln!("Error: Preset file '{}' does not exist or is not a file.", preset_path.display());
-        return Ok(());
-    }
+//    if !preset_path.exists() || !preset_path.is_file() {
+//        eprintln!("Error: Preset file '{}' does not exist or is not a file.", preset_path.display());
+//        return Ok(());
+//    }
 
     //println!("Input Directory: {:?}", input_path);
     //println!("Output Directory: {:?}", output_path);
@@ -44,28 +55,34 @@ fn main() -> io::Result<()> {
             let output_file_name = format!("{}.mp4", input_file_name.to_string().replace(".mkv", ""));
             let output_file_path = output_path.join(&output_file_name);
 
-            println!("Processing file: {:?}", input_file);
+            //println!("Processing file: {:?}", input_file);
 
-            let status = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe")
+            let mut command = Command::new("C:\\Program Files\\HandBrake\\HandBrakeCLI.exe");
+            command
                 .arg("-i").arg(&input_file)
-                .arg("-o").arg(&output_file_path)
-                .arg("--preset-import-gui").arg(&preset_path)
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .arg("-o").arg(&output_file_path);
+            if let Some(preset) = preset_path {
+                command.arg("--preset-import-gui").arg(preset);
+            }
+            let output = command
                 .output()
                 .expect("Failed to start HandBrakeCLI");
 
-            if !status.status.success() {
-                println!("HandBrakeCLI failed with: {:?}", status);
+            if !output.status.success() {
+                eprintln!("HandBrakeCLI failed with: {:?}. Error output:", output.status.code());
+                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
             } else {
                 println!("Successfully converted {:?} to {:?}", input_file, output_file_path);
+                files_processed += 1;
             }
-
-            files_processed += 1;
         } else {
             //println!("Skipping file {:?} because it is smaller than 400MB.", input_file);
         }
     }
+if files_processed == 0 {
+    eprintln!("No files were processed.");
+    std::process::exit(1);
+}
 
     println!("Processed {} files.", files_processed);
 
@@ -86,3 +103,11 @@ fn find_files(dir: &Path, files: &mut Vec<PathBuf>) {
         }
     }
 }
+fn clean_path(arg: &str) -> String {
+    let stripped = arg
+        .strip_prefix('\'')
+        .and_then(|s| s.strip_suffix('\''))
+        .unwrap_or(arg);
+    stripped.trim_end_matches('\\').to_string()
+}
+
