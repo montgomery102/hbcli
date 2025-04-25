@@ -72,7 +72,7 @@ let preset_path = preset_path_cleaned.as_ref().map(|s| Path::new(s));
                 eprintln!("HandBrakeCLI failed with: {:?}. Error output:", output.status.code());
                 eprintln!("{}", String::from_utf8_lossy(&output.stderr));
             } else {
-                println!("Successfully converted {:?} to {:?}", input_file, output_file_path);
+                println!("Successfully converted {:?}", output_file_path);
                 files_processed += 1;
             }
         } else {
